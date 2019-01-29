@@ -28,6 +28,7 @@ dependencies {
 
     //Stripe Api Library
     implementation 'com.stripe:stripe-android:6.1.2'
+    implementation 'com.stripe:stripe-java:7.18.0'
 
     //Material Designe
     implementation "com.android.support:design:27.0.0"
