@@ -1,11 +1,14 @@
 package com.asif.stripe;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -39,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     //
     Context context;
     public ProgressDialog progressDialog;
+    AlertDialog dialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,10 +51,14 @@ public class MainActivity extends AppCompatActivity {
 
         context = this.getApplicationContext();
 
-
         initializeView();
         initializeClickListner();
 
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
     }
 
     private void initializeClickListner() {
@@ -66,13 +74,17 @@ public class MainActivity extends AppCompatActivity {
                 Card card = new Card(cardNumber,cardExpMonth,cardExpYear,cardCVC);
 
                 if(!card.validateCard()){
-                    Toast.makeText(context,"Your Card is not validate. \n Please Enter Valid Card Info",Toast.LENGTH_LONG).show();
+                    progressDialog.dismiss();
+                    String msg = "Your Card is not validate. \n Please Enter Valid Card Info";
+                    alert(msg,"Card Not Valid");
+                    //Toast.makeText(context,"Your Card is not validate. \n Please Enter Valid Card Info",Toast.LENGTH_LONG).show();
                 }else {
                     com.stripe.android.Stripe stripe = new com.stripe.android.Stripe(context,"pk_test_TYooMQauvdEDq54NiTphI7jx");
                     stripe.createToken(card,
                             new TokenCallback() {
                                 @Override
                                 public void onError(Exception error) {
+                                    progressDialog.dismiss();
                                     Toast.makeText(context,error.getLocalizedMessage(),Toast.LENGTH_LONG).show();
 
                                 }
@@ -99,12 +111,19 @@ public class MainActivity extends AppCompatActivity {
                                     String crgid = null;
                                     try {
                                         crgid = requastToCharge.execute(params).get();
-                                    } catch (InterruptedException e) {
+                                    } catch (InterruptedException | ExecutionException e) {
+                                        progressDialog.dismiss();
                                         e.printStackTrace();
-                                    } catch (ExecutionException e) {
-                                        e.printStackTrace();
+                                        Toast.makeText(context,e.getLocalizedMessage(),Toast.LENGTH_LONG).show();
                                     }
-                                    Toast.makeText(context,"Success :" +crgid,Toast.LENGTH_LONG).show();
+                                    if (crgid != null) {
+                                        String msg = "Successfully Charged from your card. \n Your Charged Id is : " + crgid;
+                                        alert(msg, "Success");
+                                    }else {
+                                        String msg = "An Error Ocard! \n Please Try again";
+                                        alert(msg, "Failed");
+                                    }
+                                    //Toast.makeText(context,"Success :" +crgid,Toast.LENGTH_LONG).show();
 
                                 }
                             });
@@ -112,6 +131,23 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private boolean validate(){
+        if (editTextCardNumber.getText().toString().isEmpty()){
+            String errorMessage = "Please Enter Your Card Number";
+            editTextCardNumber.setError(errorMessage);
+            editTextCardNumber.requestFocus();
+            return  false;
+        }
+        if (editTextEmail.getText().toString().isEmpty() && !Patterns.EMAIL_ADDRESS.matcher(editTextEmail.getText().toString()).matches()){
+            String errorMessage = "Please Enter Your Valid Email";
+            editTextEmail.setError(errorMessage);
+            editTextEmail.requestFocus();
+            return  false;
+        }
+        else
+            return true;
     }
 
     private void initializeView() {
@@ -130,16 +166,25 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setMessage("Please Wait....");
         progressDialog.setTitle("Stripe");
     }
-    @Override
-    protected void onResume(){
-        super.onResume();
+
+    private void alert(String message, String titel){
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.dismiss();
+                        }
+                    })
+                .setCancelable(true)
+                .setTitle(titel)
+                .setMessage(message);
+        dialog = builder.create();
     }
 
     private class RequastToCharge extends AsyncTask<Map<String, Object>, Void, String> {
 
         @Override
         protected String doInBackground(Map<String, Object>... maps) {
-            String result;
+            String result = null;
             try {
                 Charge charge = Charge.create(maps[0]);
                 Log.i("crg_id",charge.getId());
@@ -147,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
                 //Toast.makeText(context,"Success :" +charge.getId(),Toast.LENGTH_LONG).show();
             } catch (StripeException e) {
                 e.printStackTrace();
-                result = e.getLocalizedMessage();
+                //result = e.getLocalizedMessage();
                 Log.e("Error Crg :",e.getLocalizedMessage());
             }
             return result;
