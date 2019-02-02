@@ -65,70 +65,72 @@ public class MainActivity extends AppCompatActivity {
         buttonPay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                progressDialog.show();
-                String cardNumber = editTextCardNumber.getText().toString();
-                int cardExpMonth = Integer.valueOf(editTextCardExpMonth.getText().toString());
-                int cardExpYear = Integer.valueOf(editTextCardExpYear.getText().toString());
-                String cardCVC = editTextCvc.getText().toString();
+                if (validate()) {
+                    progressDialog.show();
+                    String cardNumber = editTextCardNumber.getText().toString();
+                    int cardExpMonth = Integer.valueOf(editTextCardExpMonth.getText().toString());
+                    int cardExpYear = Integer.valueOf(editTextCardExpYear.getText().toString());
+                    String cardCVC = editTextCvc.getText().toString();
 
-                Card card = new Card(cardNumber,cardExpMonth,cardExpYear,cardCVC);
+                    Card card = new Card(cardNumber, cardExpMonth, cardExpYear, cardCVC);
 
-                if(!card.validateCard()){
-                    progressDialog.dismiss();
-                    String msg = "Your Card is not validate. \n Please Enter Valid Card Info";
-                    alert(msg,"Card Not Valid");
-                    //Toast.makeText(context,"Your Card is not validate. \n Please Enter Valid Card Info",Toast.LENGTH_LONG).show();
-                }else {
-                    com.stripe.android.Stripe stripe = new com.stripe.android.Stripe(context,"pk_test_TYooMQauvdEDq54NiTphI7jx");
-                    stripe.createToken(card,
-                            new TokenCallback() {
-                                @Override
-                                public void onError(Exception error) {
-                                    progressDialog.dismiss();
-                                    Toast.makeText(context,error.getLocalizedMessage(),Toast.LENGTH_LONG).show();
-
-                                }
-
-                                @Override
-                                public void onSuccess(Token token) {
-                                    Stripe.apiKey="sk_test_4eC39HqLyjWDarjtT1zdp7dc";
-                                    int amount = (int) (Float.valueOf(editTextAmount.getText().toString())*100);
-                                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-                                    final Map<String,Object> params = new HashMap<>();
-                                    params.put("amount",amount);
-                                    params.put("currency", "usd");
-                                    params.put("description", "Test Charge");
-                                    params.put("source", token.getId());
-                                    Map<String, String> metadata = new HashMap<>();
-                                    metadata.put("order_id", "test_order_"+timestamp.getTime());
-                                    metadata.put("customer_name", editTextCostoumerName.getText().toString());
-                                    metadata.put("phone", editTextPhone.getText().toString());
-                                    metadata.put("email", editTextEmail.getText().toString());
-                                    metadata.put("receipt_email", editTextEmail.getText().toString());
-                                    params.put("metadata", metadata);
-
-                                    RequastToCharge requastToCharge = new RequastToCharge();
-                                    String crgid = null;
-                                    try {
-                                        crgid = requastToCharge.execute(params).get();
-                                    } catch (InterruptedException | ExecutionException e) {
+                    if (!card.validateCard()) {
+                        progressDialog.dismiss();
+                        String msg = "Your Card is not validate. \n Please Enter Valid Card Info";
+                        alert(msg, "Card Not Valid");
+                        //Toast.makeText(context,"Your Card is not validate. \n Please Enter Valid Card Info",Toast.LENGTH_LONG).show();
+                    } else {
+                        com.stripe.android.Stripe stripe = new com.stripe.android.Stripe(context, "pk_test_TYooMQauvdEDq54NiTphI7jx");
+                        stripe.createToken(card,
+                                new TokenCallback() {
+                                    @Override
+                                    public void onError(Exception error) {
                                         progressDialog.dismiss();
-                                        e.printStackTrace();
-                                        Toast.makeText(context,e.getLocalizedMessage(),Toast.LENGTH_LONG).show();
-                                    }
-                                    if (crgid != null) {
-                                        String msg = "Successfully Charged from your card. \n Your Charged Id is : " + crgid;
-                                        alert(msg, "Success");
-                                    }else {
-                                        String msg = "An Error Ocard! \n Please Try again";
-                                        alert(msg, "Failed");
-                                    }
-                                    //Toast.makeText(context,"Success :" +crgid,Toast.LENGTH_LONG).show();
+                                        Toast.makeText(context, error.getLocalizedMessage(), Toast.LENGTH_LONG).show();
 
-                                }
-                            });
+                                    }
+
+                                    @Override
+                                    public void onSuccess(Token token) {
+                                        Stripe.apiKey = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";
+                                        int amount = (int) (Float.valueOf(editTextAmount.getText().toString()) * 100);
+                                        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                                        final Map<String, Object> params = new HashMap<>();
+                                        params.put("amount", amount);
+                                        params.put("currency", "usd");
+                                        params.put("description", "Test Charge");
+                                        params.put("source", token.getId());
+                                        Map<String, String> metadata = new HashMap<>();
+                                        metadata.put("order_id", "test_order_" + timestamp.getTime());
+                                        metadata.put("customer_name", editTextCostoumerName.getText().toString());
+                                        metadata.put("phone", editTextPhone.getText().toString());
+                                        metadata.put("email", editTextEmail.getText().toString());
+                                        metadata.put("receipt_email", editTextEmail.getText().toString());
+                                        params.put("metadata", metadata);
+
+                                        RequastToCharge requastToCharge = new RequastToCharge();
+                                        String crgid = null;
+                                        try {
+                                            crgid = requastToCharge.execute(params).get();
+                                        } catch (InterruptedException | ExecutionException e) {
+                                            progressDialog.dismiss();
+                                            e.printStackTrace();
+                                            Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                                        }
+                                        if (crgid != null) {
+                                            String msg = "Successfully Charged from your card. \n Your Charged Id is : " + crgid;
+                                            alert(msg, "Success");
+                                        } else {
+                                            String msg = "An Error Ocard! \n Please Try again";
+                                            alert(msg, "Failed");
+                                        }
+                                        //Toast.makeText(context,"Success :" +crgid,Toast.LENGTH_LONG).show();
+
+                                    }
+                                });
+                    }
+
                 }
-
             }
         });
     }
@@ -142,6 +144,42 @@ public class MainActivity extends AppCompatActivity {
         }
         if (editTextEmail.getText().toString().isEmpty() && !Patterns.EMAIL_ADDRESS.matcher(editTextEmail.getText().toString()).matches()){
             String errorMessage = "Please Enter Your Valid Email";
+            editTextEmail.setError(errorMessage);
+            editTextEmail.requestFocus();
+            return  false;
+        }
+        if (editTextCardExpMonth.getText().toString().isEmpty()){
+            String errorMessage = "Please Enter Card Exp. Date";
+            editTextEmail.setError(errorMessage);
+            editTextEmail.requestFocus();
+            return  false;
+        }
+        if (editTextCardExpYear.getText().toString().isEmpty()){
+            String errorMessage = "Please Enter Card Exp. Date";
+            editTextEmail.setError(errorMessage);
+            editTextEmail.requestFocus();
+            return  false;
+        }
+        if (editTextCvc.getText().toString().isEmpty()){
+            String errorMessage = "Please Enter Card Exp. Date";
+            editTextEmail.setError(errorMessage);
+            editTextEmail.requestFocus();
+            return  false;
+        }
+        if (editTextCostoumerName.getText().toString().isEmpty()){
+            String errorMessage = "Please Enter Your Name";
+            editTextEmail.setError(errorMessage);
+            editTextEmail.requestFocus();
+            return  false;
+        }
+        if (editTextPhone.getText().toString().isEmpty()){
+            String errorMessage = "Please Enter Your Phone Number";
+            editTextEmail.setError(errorMessage);
+            editTextEmail.requestFocus();
+            return  false;
+        }
+        if (editTextAmount.getText().toString().isEmpty()){
+            String errorMessage = "Please Enter Amount To Pay";
             editTextEmail.setError(errorMessage);
             editTextEmail.requestFocus();
             return  false;
