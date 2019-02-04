@@ -5,6 +5,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -42,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     //
     Context context;
     public ProgressDialog progressDialog;
-    AlertDialog dialog;
+    ///AlertDialog dialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +51,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         context = this.getApplicationContext();
+        //dialog = new AlertDialog(context);
+        //runOnUiThread();
+        //alert("shdflhdslf","dsfkls");
+        //dialog.show();
 
         initializeView();
         initializeClickListner();
@@ -80,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
                         alert(msg, "Card Not Valid");
                         //Toast.makeText(context,"Your Card is not validate. \n Please Enter Valid Card Info",Toast.LENGTH_LONG).show();
                     } else {
-                        com.stripe.android.Stripe stripe = new com.stripe.android.Stripe(context, "pk_test_TYooMQauvdEDq54NiTphI7jx");
+                        com.stripe.android.Stripe stripe = new com.stripe.android.Stripe(context, "pk_test_8iKVwsSxm54QIveAPOJmLYYa");
                         stripe.createToken(card,
                                 new TokenCallback() {
                                     @Override
@@ -92,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
 
                                     @Override
                                     public void onSuccess(Token token) {
-                                        Stripe.apiKey = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";
+                                        Stripe.apiKey = "sk_test_qPIWrxe3QefpEO2vRgdFkyFv";
                                         int amount = (int) (Float.valueOf(editTextAmount.getText().toString()) * 100);
                                         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
                                         final Map<String, Object> params = new HashMap<>();
@@ -109,19 +114,30 @@ public class MainActivity extends AppCompatActivity {
                                         params.put("metadata", metadata);
 
                                         RequastToCharge requastToCharge = new RequastToCharge();
-                                        String crgid = null;
+                                        RequastToChargeDtails requastToChargeDtails = new RequastToChargeDtails();
+                                        Charge charge = null;
                                         try {
-                                            crgid = requastToCharge.execute(params).get();
-                                        } catch (InterruptedException | ExecutionException e) {
+                                            String crgid = requastToCharge.execute(params).get();
+                                            charge = requastToChargeDtails.execute(crgid).get();
+                                            
+                                        } catch (InterruptedException | ExecutionException  e) {
                                             progressDialog.dismiss();
                                             e.printStackTrace();
                                             Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
                                         }
-                                        if (crgid != null) {
-                                            String msg = "Successfully Charged from your card. \n Your Charged Id is : " + crgid;
-                                            alert(msg, "Success");
+                                        if (charge != null) {
+                                            Map<String,String> metData = new HashMap<>();
+                                            metadata = charge.getMetadata();
+                                            StringBuilder sb =new StringBuilder();
+                                            sb.append("Successfully Charged from your card \n");
+                                            sb.append("Customer Name:" +metadata.get("customer_name")+"\n");
+                                            sb.append("Amount:" +(double)charge.getAmount()/100+"\n");
+                                            sb.append("Order Id:" +metadata.get("order_id")+"\n");
+                                            sb.append("Email:" +metadata.get("email")+"\n");
+                                            //String msg = "Successfully Charged from your card. \n Your Charged Id is : " ;
+                                            alert(sb.toString(), "Success");
                                         } else {
-                                            String msg = "An Error Ocard! \n Please Try again";
+                                            String msg = "An Error ! \n Please Try again";
                                             alert(msg, "Failed");
                                         }
                                         //Toast.makeText(context,"Success :" +crgid,Toast.LENGTH_LONG).show();
@@ -206,16 +222,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void alert(String message, String titel){
-        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            dialog.dismiss();
-                        }
-                    })
-                .setCancelable(true)
-                .setTitle(titel)
-                .setMessage(message);
-        dialog = builder.create();
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(MainActivity.this, android.R.style.Theme_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(MainActivity.this);
+        }
+        builder.setTitle(titel)
+                .setMessage(message)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .setIcon(android.R.drawable.alert_dark_frame)
+                .show();
     }
 
     private class RequastToCharge extends AsyncTask<Map<String, Object>, Void, String> {
@@ -235,10 +256,28 @@ public class MainActivity extends AppCompatActivity {
             }
             return result;
         }
+        
 
+        
+    }
+    
+    private class RequastToChargeDtails extends AsyncTask<String, Void, Charge> {
         @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
+        protected Charge doInBackground(String... src) {
+            Charge charge;
+            try {
+                Log.i("Charge Id:",String.valueOf(src[0]));
+                charge = Charge.retrieve(String.valueOf(src[0]));
+            } catch (StripeException e) {
+                charge = null;
+                e.printStackTrace();
+            }
+            return charge;
+        }
+    
+        @Override
+        protected void onPostExecute(Charge charge) {
+            super.onPostExecute(charge);
             progressDialog.dismiss();
         }
     }
